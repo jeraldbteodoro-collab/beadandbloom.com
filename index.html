@@ -2130,11 +2130,19 @@ function copyShareLink(){
   if(data.msg) shareUrl.searchParams.set('msg', data.msg);
   if(data.from) shareUrl.searchParams.set('from', data.from);
   const url=shareUrl.toString();
-  navigator.clipboard.writeText(url).then(()=>showToast('Share link copied!'),()=>{
-    // Fallback for non-https
-    const ta=document.createElement('textarea');ta.value=url;
-    document.body.appendChild(ta);ta.select();document.execCommand('copy');
-    document.body.removeChild(ta);showToast('Link copied!');
+  // Try to get a short link (is.gd) and copy it. Fall back to full URL if shortening fails.
+  const shortApi = 'https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url);
+  fetch(shortApi).then(r=>r.text()).then(shortText=>{
+    const toCopy = (shortText && shortText.indexOf('http')===0) ? shortText.trim() : url;
+    navigator.clipboard.writeText(toCopy).then(()=> showToast(toCopy===shortText.trim()? 'Short link copied!' : 'Link copied!'), ()=>{
+      // fallback copy
+      const ta=document.createElement('textarea');ta.value=toCopy;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Link copied!');
+    });
+  }).catch(()=>{
+    // If shorten request fails, copy full URL
+    navigator.clipboard.writeText(url).then(()=>showToast('Link copied!'),()=>{
+      const ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Link copied!');
+    });
   });
 }
 
