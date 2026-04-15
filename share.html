@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shared Bracelet</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fdf6f0;--panel:#fffaf6;--accent:#e8734a;--ink:#2a1a0e;--ink2:#6b4c3b}
+html,body{height:100%}
+body{margin:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--ink)}
+.container{width:min(920px,96vw);background:var(--panel);border-radius:16px;padding:1.2rem 1.4rem;box-shadow:0 12px 40px rgba(42,26,14,.08);text-align:center}
+.canvas-wrap{display:flex;align-items:center;justify-content:center;padding:0.6rem}
+canvas#braceletCanvas{width:100%;max-width:680px;height:auto;border-radius:12px;background:transparent;display:block}
+.message{font-family:'Playfair Display',serif;margin-top:1rem;color:var(--ink2);font-size:1.05rem;padding:0 1rem}
+.from{margin-top:.6rem;color:var(--ink2);opacity:.8;font-size:.9rem}
+.actions{margin-top:1rem;display:flex;justify-content:center;gap:.6rem}
+.btn{background:linear-gradient(135deg,var(--accent),#c94f8a);color:#fff;padding:.6rem .9rem;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+.small{background:transparent;border:1px solid rgba(42,26,14,.08);padding:.5rem .8rem;border-radius:10px}
+.placeholder{padding:2rem;color:var(--ink2);opacity:.6}
+</style>
+</head>
+<body>
+<div class="container" role="main" aria-label="Shared bracelet">
+  <div class="canvas-wrap">
+    <canvas id="braceletCanvas" width="640" height="640" aria-hidden="false"></canvas>
+  </div>
+  <div id="message" class="message"></div>
+  <div id="from" class="from"></div>
+  <div class="actions">
+    <button id="downloadBtn" class="btn">Download Image</button>
+    <a id="backLink" class="small" href="index.html">Back</a>
+  </div>
+</div>
+<script>
+function getParam(name){ const p = new URLSearchParams(location.search); return p.get(name); }
+function decode(s){ if(!s) return ''; try{ return decodeURIComponent(s.replace(/\+/g,' ')); } catch(e){ try{ return atob(s); }catch(e2){return s;} } }
+const msgRaw = getParam('msg') || getParam('message') || '';
+const fromRaw = getParam('from') || '';
+const imgRaw = getParam('img') || getParam('image') || '';
+const beadsRaw = getParam('beads') || '';
+
+const messageEl = document.getElementById('message');
+const fromEl = document.getElementById('from');
+const canvas = document.getElementById('braceletCanvas');
+const ctx = canvas.getContext('2d');
+
+messageEl.innerHTML = msgRaw ? decode(msgRaw).replace(/\n/g,'<br>') : '';
+fromEl.textContent = fromRaw ? '— ' + decode(fromRaw) : '';
+
+function drawPlaceholder(){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#eee'; ctx.beginPath(); ctx.arc(canvas.width/2,canvas.height/2,140,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#bdbdbd'; ctx.font='16px DM Sans, sans-serif'; ctx.textAlign='center'; ctx.fillText('No bracelet data',canvas.width/2,canvas.height/2+6); }
+
+function drawFromImageDataUrl(dataUrl){
+  const img = new Image();
+  img.onload = ()=> {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#fff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    const scale = Math.min(canvas.width/img.width,canvas.height/img.height);
+    const w = img.width*scale, h = img.height*scale;
+    ctx.drawImage(img, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
+  };
+  img.onerror = ()=> drawPlaceholder();
+  img.src = dataUrl;
+}
+
+function parseBeads(raw){
+  if(!raw) return null;
+  try{
+    const decoded = decodeURIComponent(raw);
+    return JSON.parse(decoded);
+  }catch(e){
+    try{
+      const bin = atob(raw);
+      return JSON.parse(bin);
+    }catch(e2){
+      try{ return JSON.parse(raw); }catch(e3){ return null; }
+    }
+  }
+}
+
+function drawBeads(beads){
+  if(!beads || !beads.length){ drawPlaceholder(); return; }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#fff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const cx = canvas.width/2, cy = canvas.height/2;
+  const ringR = Math.min(cx,cy) - 100;
+  // draw string
+  ctx.beginPath(); ctx.lineWidth = 8; ctx.strokeStyle = '#c8a882'; ctx.arc(cx,cy,ringR,0,Math.PI*2); ctx.stroke();
+  // draw beads around ring
+  for(let i=0;i<beads.length;i++){
+    const b = beads[i];
+    const angle = -Math.PI/2 + (i/beads.length)*Math.PI*2;
+    const x = cx + Math.cos(angle)*ringR;
+    const y = cy + Math.sin(angle)*ringR;
+    const r = (b.size || b.sz || 14);
+    // shadow
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.ellipse(x+2,y+3,r*1.02,r*0.7,0,0,Math.PI*2);
+    ctx.fill();
+    // bead
+    ctx.beginPath();
+    ctx.fillStyle = b.hex || b.color || b.col || '#e8556e';
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fill();
+    // highlight
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.ellipse(x - r*0.25, y - r*0.35, r*0.45, r*0.25, -0.6, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+const beadsData = parseBeads(beadsRaw);
+if(imgRaw){
+  const src = decode(imgRaw);
+  drawFromImageDataUrl(src);
+}else if(beadsData){
+  drawBeads(beadsData);
+}else{
+  drawPlaceholder();
+}
+
+// download combined image: canvas + text
+document.getElementById('downloadBtn').addEventListener('click',()=>{
+  const out = document.createElement('canvas');
+  out.width = canvas.width;
+  out.height = canvas.height + 140;
+  const octx = out.getContext('2d');
+  // background
+  octx.fillStyle = '#fff';
+  octx.fillRect(0,0,out.width,out.height);
+  // bracelet
+  octx.drawImage(canvas,0,0);
+  // message
+  octx.fillStyle = '#2a1a0e';
+  octx.font = '20px Playfair Display, serif';
+  octx.textAlign = 'center';
+  const lines = (messageEl.textContent||'').split('\n');
+  let y = canvas.height + 40;
+  for(const line of lines){
+    octx.fillText(line, out.width/2, y);
+    y += 26;
+  }
+  if(fromEl.textContent){
+    octx.font = '16px DM Sans, sans-serif';
+    octx.fillText(fromEl.textContent, out.width/2, y+10);
+  }
+  const link = document.createElement('a');
+  link.download = 'bracelet.png';
+  link.href = out.toDataURL('image/png');
+  link.click();
+});
+
+// Try to autosize canvas to device
+(function resize(){
+  const w = Math.min(760, Math.max(320, Math.round(window.innerWidth * 0.9)));
+  canvas.width = w;
+  canvas.height = w;
+  // re-render accordingly
+  if(imgRaw) drawFromImageDataUrl(decode(imgRaw));
+  else if(beadsData) drawBeads(beadsData);
+  else drawPlaceholder();
+})();
+
+</script>
+</body>
+</html>
