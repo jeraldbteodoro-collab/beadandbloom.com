@@ -2123,8 +2123,14 @@ function copyShareLink(){
     sc:state.stringColor,st:state.stringThick
   };
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-  const url=window.location.href.split('?')[0]+'?b='+encoded;
-  navigator.clipboard.writeText(url).then(()=>showToast('Link copied!'),()=>{
+  const shareUrl=new URL('share.html', window.location.href);
+  // include both `beads` and legacy `b` for compatibility
+  shareUrl.searchParams.set('beads', encoded);
+  shareUrl.searchParams.set('b', encoded);
+  if(data.msg) shareUrl.searchParams.set('msg', data.msg);
+  if(data.from) shareUrl.searchParams.set('from', data.from);
+  const url=shareUrl.toString();
+  navigator.clipboard.writeText(url).then(()=>showToast('Share link copied!'),()=>{
     // Fallback for non-https
     const ta=document.createElement('textarea');ta.value=url;
     document.body.appendChild(ta);ta.select();document.execCommand('copy');

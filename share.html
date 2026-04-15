@@ -38,7 +38,8 @@ function decode(s){ if(!s) return ''; try{ return decodeURIComponent(s.replace(/
 const msgRaw = getParam('msg') || getParam('message') || '';
 const fromRaw = getParam('from') || '';
 const imgRaw = getParam('img') || getParam('image') || '';
-const beadsRaw = getParam('beads') || '';
+// Accept both `beads` (new) and `b` (legacy) query param names
+const beadsRaw = getParam('beads') || getParam('b') || getParam('data') || '';
 
 const messageEl = document.getElementById('message');
 const fromEl = document.getElementById('from');
@@ -66,16 +67,23 @@ function drawFromImageDataUrl(dataUrl){
 
 function parseBeads(raw){
   if(!raw) return null;
+  // If it looks like a base64 payload, try that first
   try{
-    const decoded = decodeURIComponent(raw);
-    return JSON.parse(decoded);
-  }catch(e){
-    try{
-      const bin = atob(raw);
-      return JSON.parse(bin);
-    }catch(e2){
-      try{ return JSON.parse(raw); }catch(e3){ return null; }
+    if(/^[A-Za-z0-9+/=]+$/.test(raw)){
+      try{
+        const jsonStr = decodeURIComponent(escape(atob(raw)));
+        return JSON.parse(jsonStr);
+      }catch(e){}
     }
+    // Try percent-decoded JSON
+    try{
+      const decoded = decodeURIComponent(raw);
+      return JSON.parse(decoded);
+    }catch(e){}
+    // Try raw JSON
+    try{ return JSON.parse(raw); }catch(e){ return null; }
+  }catch(e){
+    return null;
   }
 }
 
