@@ -723,6 +723,25 @@ const PRESETS=[
     msgHint:'Sending you this with love and prayers…'
   },
   {
+    id:'lifetime',name:'Lifetime',emoji:'🌻',
+    desc:'Inspired by Ben&Ben — golden sun, endless blue',
+    colors:[2,6,12,15,2,6,14,12],
+    beads:[
+      {ci:2, d:'sun',   s:9, sh:'round', tx:'gloss'},
+      {ci:6, d:'wave',  s:9, sh:'round', tx:'default'},
+      {ci:12,d:'star',  s:9, sh:'round', tx:'gloss'},
+      {ci:15,d:'plain', s:8, sh:'round', tx:'default'},
+      {ci:2, d:'dot',   s:9, sh:'round', tx:'gloss'},
+      {ci:14,d:'wave',  s:9, sh:'round', tx:'default'},
+      {ci:12,d:'sun',   s:9, sh:'round', tx:'gloss'},
+      {ci:6, d:'plain', s:8, sh:'round', tx:'default'},
+      {ci:2, d:'star',  s:9, sh:'round', tx:'gloss'},
+      {ci:15,d:'wave',  s:9, sh:'round', tx:'default'},
+    ],
+    sc:'#c8a030',st:3,
+    msgHint:'This one\'s for you. Always and for a lifetime…'
+  },
+  {
     id:'custom',name:'Start Fresh',emoji:'🎨',
     desc:'Blank canvas — make it entirely yours',
     colors:[0,6,3,9,12,15],
@@ -1503,7 +1522,7 @@ function renderStep3Preview(){
 /* Step 4 preview — uses dedicated preview canvases with live animation */
 let previewRaf=null;
 let previewStringNodes=[],previewStringVel=[];
-const PREV_R=100,PREV_CX=200,PREV_CY=200;
+const PREV_R=110,PREV_CX=150,PREV_CY=150;
 
 function renderStep4Preview(){
   /* Set up preview canvases */
@@ -1573,8 +1592,8 @@ function updatePreviewMessage(){
    Improved collision detection & magnetic snapping
 ============================================================ */
 function getBeadAngularRadius(size){
-  /* Convert pixel radius to angular radius on the ring */
-  return(size*2.3)/RING_R;
+  /* Angular footprint of a bead — smaller multiplier = beads can pack closer */
+  return(size*1.4)/RING_R;
 }
 
 function getAngleForNewBead(){
